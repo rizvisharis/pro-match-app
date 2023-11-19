@@ -3,12 +3,19 @@
 namespace App\Services;
 
 use App\Http\Resources\UserResource;
+use App\Repositories\Contracts\SignupRepositoryInterface;
 use App\Utils\Constants;
 use Exception;
 
 class AuthenticateService
 {
-    public function login(array $requestData)
+    private $signupRepository;
+
+    public function __construct(SignupRepositoryInterface $signupRepository)
+    {
+        $this->signupRepository = $signupRepository;
+    }
+    public function login(array $requestData): array
     {
         try {
             if (!auth()->attempt($requestData)) throw new Exception(
@@ -17,9 +24,19 @@ class AuthenticateService
             );
 
             return [
-                'token' => auth()->user()->createToken(auth()->user()->name)->plainTextToken,
+                'token' => auth()->user()->createToken(auth()->user()->email)->plainTextToken,
                 'user' => new UserResource(auth()->user())
             ];
+        } catch (Exception $exception) {
+            throw $exception;
+        }
+    }
+
+    public function signup(array $requestData)
+    {
+        try {
+            $requestData['password'] = bcrypt($requestData['password']);
+            return $this->signupRepository->create($requestData);
         } catch (Exception $exception) {
             throw $exception;
         }
